@@ -2,12 +2,14 @@ use axum::{
     extract::State,
     http::StatusCode,
     response::Html,
-    routing::{get, post},
+    routing::{get, get_service, post},
     Json, Router,
 };
 use minijinja::{context, render, Environment};
 use serde::{Deserialize, Serialize};
 use std::{net::SocketAddr, sync::Arc};
+
+use tower_http::services::ServeDir;
 
 #[tokio::main]
 async fn main() {
@@ -15,7 +17,7 @@ async fn main() {
     tracing_subscriber::fmt::init();
 
     let mut env = Environment::new();
-    env.add_template("list", include_str!("../templates/list.html"))
+    env.add_template("list", include_str!("templates/list.html"))
         .unwrap();
     let env = Arc::new(env);
 
@@ -25,6 +27,7 @@ async fn main() {
         .route("/", get(list))
         // `POST /users` goes to `create_user`
         .route("/users", post(create_user))
+        .nest_service("/public", get_service(ServeDir::new("public")))
         .with_state(env);
 
     // run our app with hyper
