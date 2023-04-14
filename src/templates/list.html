@@ -5,43 +5,43 @@
 <head>
 
 
-  <meta charset="utf-8">
+    <meta charset="utf-8">
 
-  <title>Metadate</title>
-  <meta name="description" content="The HTML5 Herald">
-  <meta name="author" content="SitePoint">
+    <title>Metadate</title>
+    <meta name="description" content="The HTML5 Herald">
+    <meta name="author" content="SitePoint">
 
-  <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" type="text/css" href="public/style.css">
 
 </head>
 
 <body>
-  <div id="frame">
+    <div id="frame">
 
-    <h1 id="heading">METADATE</h1>
-    <div id="content">
-        <div class=row>
-            <a class="link" href="/newdate">New Date</a> <a class="link" href="/kiosk">Kiosk</a>
+        <h1 id="heading">METADATE</h1>
+        <div id="content">
+            <div class=row>
+                <a class="link" href="/newdate">New Date</a> <a class="link" href="/kiosk">Kiosk</a>
+            </div>
+            <% dates.forEach(function(item,index){ %>
+                <div class=row>
+                    <a href="<%= item.shortUrl %>">
+                        <span class="inputFields">
+                            <span class="listheader">
+                                <%= item.who %> seeks <%= item.what %>
+                            </span>
+                            <br>
+                            <span class="listcontent">
+                                <%= item.shortdesc %>
+                            </span>
+
+                        </span>
+                    </a>
+                </div>
+                <% }) %>
         </div>
-        <% dates.forEach(function(item,index){ %>
-        <div class=row>
-            <a href="<%= item.shortUrl %>">
-                <span class="inputFields">
-                    <span class="listheader">
-                        <%= item.who %> seeks <%= item.what %>
-                    </span>
-                    <br>
-                    <span class="listcontent">
-                        <%= item.shortdesc %>
-                    </span>
 
-                </span>
-            </a>
-        </div>
-        <% }) %>
-    </div> 
-
-  </div>
+    </div>
 </body>
 
 </html>
