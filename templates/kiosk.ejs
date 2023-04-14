@@ -1,0 +1,109 @@
+
+<!doctype html>
+
+<html lang="en">
+<head>
+
+
+  <meta charset="utf-8">
+
+  <title>Metadate</title>
+  <meta name="description" content="The HTML5 Herald">
+  <meta name="author" content="SitePoint">
+
+
+  <link rel="stylesheet" type="text/css" href="kiosk.css" >
+
+</head>
+
+<body>
+
+                <div class="slider"></div>
+    <template>
+                <div class="slider">
+                <div id="content">
+                    <div id="head">
+                        <div id="who" class="whoWhat">Hacker</div>
+                        <div id="seeks">seeks</div> 
+                        <div id="what" class="whoWhat">Hardware</div>
+                    </div>
+                    <div id="shortdesc">
+                        {shortdesc} 
+                    </div>
+                    <div id="url">
+                        <a href="" id="link"></a>
+                        <div id="qrcode"></div>
+                    </div>
+                </div>
+	        </div>
+    </template>
+    <script src="qrcode.js"></script>
+    <script>
+        var nextpage = 0;
+        var myObj = {"who":"", 
+            "what":"",
+            "shortdesc":"", 
+            "url":""
+        };
+
+
+
+const fetchPlus = (url) =>
+  fetch(url)
+    .then(res => {
+      if (res.ok) {
+        return res
+      }
+      if (true) {
+        return fetchPlus(url)
+      }
+      throw new Error(res.status)
+    })
+    .catch(error => console.error(error.message))
+
+
+
+
+
+
+
+        function createDiv(data){
+            var template = document.getElementsByTagName("template")[0];
+            var clone = template.content.cloneNode(true);
+            clone.getElementById("who").innerText=data.who;
+            clone.getElementById("what").innerText=data.what;
+            clone.getElementById("shortdesc").innerText=data.shortdesc;
+            clone.getElementById("link").href=data.shortUrl;
+            clone.getElementById("link").innerText=data.url;
+            qrcode = new QRCode(clone.getElementById("qrcode"), {text: "URL:" +data.url, useSVG:true, correctLevel : QRCode.CorrectLevel.M});
+            return clone;
+        }
+
+        function getNextDateData()
+        {
+
+            fetchPlus('/kiosk/' + nextpage)
+              .then(response => response.json())
+              .then(data => swapContent(data));
+        }
+
+        function swapContent(data) {
+            nextpage = data.nextpage;
+            const clone = createDiv(data);
+            document.body.appendChild(clone);
+            document.getElementsByClassName("slider")[0].style.right="100%";
+            setTimeout(function(){
+                document.getElementsByClassName("slider")[1].style.right="0";
+                var oldElement =document.getElementsByClassName("slider")[0];
+                oldElement.parentNode.removeChild(oldElement);
+                setTimeout(getNextDateData,1000 * 20);
+
+            },1000);
+        }
+
+        clone = createDiv(myObj);
+
+        getNextDateData();
+    </script>
+</body>
+</html>
