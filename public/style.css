@@ -1,0 +1,186 @@
+body{
+    background-color:black;
+}
+
+* {
+    color:green;
+    box-sizing:border-box;
+    overflow-wrap:break-word;
+}
+
+#frame{
+    width:1000px;
+
+    text-align: left;
+    margin: auto;
+    overflow:auto;
+}
+
+#frame *{
+}
+
+#heading {
+    margin-top: 50px;
+    margin-bottom: 50px;
+	font-size: 100px;
+	background-color: black;
+    font-family:Helvetica,Arial,sans-serif; 
+    font-variant:small-caps;
+    text-align: center;
+
+}
+
+.head{
+    display:flex;
+    justify-content:space-around;
+    align-items:center;
+}
+
+#content  {
+    font-family:Verdana,sans-serif;	
+}
+
+#content *{
+    font-family:Verdana,sans-serif;	
+}
+
+
+#seeks{
+    float:left;
+    font-size: 30pt;
+    width: 200px;
+    text-align:center;
+}
+
+.whoWhat{
+    font-family:Verdana,sans-serif;	
+    font-size: 30pt;
+    height: 45px;
+    width: 400px;
+    text-align: center;
+    color:#bec1c4;
+    border:0px;
+    background-color:#343536;
+    float: left;
+    border-radius: 25px;
+
+}
+.input:focus{
+    outline:none;
+}
+
+.row{
+    float:left;
+    width:100%;
+    margin-bottom: 15px;
+}
+
+.error{
+    font-size: 15pt;
+    border-radius: 25px;
+    background: #ffb270;
+    width:100%;
+    padding:15px;
+    color: black;
+    float:left;
+}
+
+.fieldDescriptions{
+    float:left;
+    font-size: 15pt;
+}
+
+.inputFields
+{
+    width: 100%;
+    border-radius: 25px;
+    background-color:#343536;
+    padding:15px;
+    color:#bec1c4;
+    font-size: 15pt;
+    float:left;
+}
+
+#shortdesc{
+    height:100px;
+}
+
+#longdesc{
+    height:300px;
+}
+
+#contact{
+    height:300px;
+}
+
+#submitButton{
+    height:40px;
+    width:200px;
+    color:#bec1c4;
+    background-color:#343536;
+    border-radius:25px;
+    font-size: 20pt;
+    margin:20px 0;
+}
+
+
+.listheader{
+    font-size: 30pt;
+}
+
+.listcontent{
+    color:#bec1c4;
+}
+
+.link{
+    width:20%;
+    border-radius: 25px;
+    color:#bec1c4;
+    padding:15px;
+    background-color:#343536;
+    font-size: 20pt;
+    margin-right: 2%;
+    margin-bottom:20px ;
+    text-align:center;
+    float:left;
+}
+
+@media screen and (max-width: 1000px) {
+    #frame{
+        width:100%;
+    }
+    .whoWhat{
+        width:100%;
+    }
+    .fieldDescriptions{
+        text-align:center;
+        margin: 2vw 0vw;
+    }
+    
+    .inputFields
+    {
+    }
+    #submitButton{
+        margin:auto;
+        display:block;
+        }
+    #heading {
+    	font-size: 15vw;
+        margin: 5vw 0vw;
+    }
+    #seeks
+    {
+        width:100%;
+    }
+    .error{
+        text-align:center;
+    }
+    .link{
+        width:100%;
+        margin: 1vw 0vw;
+        padding: 1vw 5vw;
+    }
+    .listheader{
+        font-size:8vw;
+    }
+}

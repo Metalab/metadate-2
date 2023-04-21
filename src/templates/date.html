@@ -1,0 +1,77 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+
+
+    <meta charset="utf-8">
+
+    <title>Metadate</title>
+    <meta name="description" content="The HTML5 Herald">
+    <meta name="author" content="SitePoint">
+
+    <link rel="stylesheet" type="text/css" href="/public/style.css">
+
+</head>
+
+<body>
+    <div id="frame">
+
+        <h1 id="heading">METADATE</h1>
+        <div id="content">
+            <% errors.forEach(function(item,index){ %>
+                <div class=row>
+                    <div class=error>
+                        <%= item %>
+                    </div>
+                </div>
+                <% }) %>
+                    <div class="row">
+                        <a class="link" href="/newdate">New Date</a> <a class="link" href="/kiosk">Kiosk</a>
+                    </div>
+                    <div class="row">
+                        <div type="text" name="who" class="whoWhat" placeholder="Who">
+                            {{ date.who }}
+                        </div>
+                        <div id="seeks">seeks</div>
+                        <div type="text" name="what" class="whoWhat" placeholder="What">
+                            {{ date.what }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <p class="fieldDescriptions">Please briefly explain what you seek in 200 words or less. Please
+                            keep it
+                            legal!</p>
+                        <div id="shortdesc" class="inputFields" maxlength="200" name="shortdesc" placeholder="">
+                            {{ date.shortdesc }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <p class="fieldDescriptions">Please thurrowly descripe what you seek in as many words as it
+                            takes.
+                            Please keep it legal!</p>
+                        <div id="longdesc" class="inputFields" name="shortdesc" placeholder="">
+                            {{ date.longdesc }}
+                        </div>
+                    </div>
+                    <div class="row">
+                        <p class="fieldDescriptions">Pease tell how interrested people can contact you</p>
+                        <div id="contact" class="inputFields" name="shortdesc" placeholder="">
+                            {{ date.contact }}
+                        </div>
+                    </div>
+
+                    <form method="post" id="form">
+                        <div class="row">
+                            <p class="fieldDescriptions">Enter the password to delete the date (try "public")</p>
+                            <textarea id="password" class="inputFields" name="password" placeholder=""></textarea>
+                            <div class="row">
+                                <input id="submitButton" type="submit" value="Delete" />
+                            </div>
+                    </form>
+        </div>
+    </div>
+</body>
+
+</html>
