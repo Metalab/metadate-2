@@ -57,6 +57,22 @@ async fn list(State(env): State<Arc<Environment<'static>>>) -> Html<String> {
     Html(tmpl.render(context!(name => "John")).unwrap())
 }
 
+async fn show_date(
+    State(env): State<Arc<Environment<'static>>>,
+    Path(user_id): Path<u32>,
+) -> Html<String> {
+    let current_date = Date {
+        id: 1,
+        username: user_id.to_string(),
+        who: user_id.to_string(),
+        what: String::from("aaa"),
+        shortdesc: String::from("aaa"),
+        longdesc: String::from("aaa"),
+        contact: String::from("aaa"),
+    };
+    let tmpl = env.get_template("date").unwrap();
+    Html(tmpl.render(context!(date => current_date)).unwrap())
+}
 async fn create_user(
     // this argument tells axum to parse the request body
     // as JSON into a `CreateUser` type
