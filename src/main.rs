@@ -1,5 +1,5 @@
 use axum::{
-    extract::State,
+    extract::{Path, State},
     http::StatusCode,
     response::Html,
     routing::{get, get_service, post},
@@ -28,6 +28,8 @@ async fn main() {
 
     let mut env = Environment::new();
     env.add_template("list", include_str!("templates/list.html"))
+        .unwrap();
+    env.add_template("date", include_str!("templates/date.html"))
         .unwrap();
     let env = Arc::new(env);
 
