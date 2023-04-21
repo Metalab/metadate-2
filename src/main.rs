@@ -11,6 +11,16 @@ use std::{net::SocketAddr, sync::Arc};
 
 use tower_http::services::ServeDir;
 
+#[derive(Serialize)]
+struct Date {
+    id: u64,
+    username: String,
+    who: String,
+    what: String,
+    shortdesc: String,
+    longdesc: String,
+    contact: String,
+}
 #[tokio::main]
 async fn main() {
     // initialize tracing
@@ -27,6 +37,7 @@ async fn main() {
         .route("/", get(list))
         // `POST /users` goes to `create_user`
         .route("/users", post(create_user))
+        .route("/date/:date_id", get(show_date))
         .nest_service("/public", get_service(ServeDir::new("public")))
         .with_state(env);
 

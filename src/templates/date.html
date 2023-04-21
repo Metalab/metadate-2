@@ -11,7 +11,7 @@
     <meta name="description" content="The HTML5 Herald">
     <meta name="author" content="SitePoint">
 
-    <link rel="stylesheet" type="text/css" href="pubic/style.css">
+    <link rel="stylesheet" type="text/css" href="/public/style.css">
 
 </head>
 
@@ -32,11 +32,11 @@
                     </div>
                     <div class="row">
                         <div type="text" name="who" class="whoWhat" placeholder="Who">
-                            <%= who %>
+                            {{ date.who }}
                         </div>
                         <div id="seeks">seeks</div>
                         <div type="text" name="what" class="whoWhat" placeholder="What">
-                            <%= what %>
+                            {{ date.what }}
                         </div>
                     </div>
                     <div class="row">
@@ -44,7 +44,7 @@
                             keep it
                             legal!</p>
                         <div id="shortdesc" class="inputFields" maxlength="200" name="shortdesc" placeholder="">
-                            <%= shortdesc %>
+                            {{ date.shortdesc }}
                         </div>
                     </div>
                     <div class="row">
@@ -52,13 +52,13 @@
                             takes.
                             Please keep it legal!</p>
                         <div id="longdesc" class="inputFields" name="shortdesc" placeholder="">
-                            <%= longdesc %>
+                            {{ date.longdesc }}
                         </div>
                     </div>
                     <div class="row">
                         <p class="fieldDescriptions">Pease tell how interrested people can contact you</p>
                         <div id="contact" class="inputFields" name="shortdesc" placeholder="">
-                            <%= contact %>
+                            {{ date.contact }}
                         </div>
                     </div>
 
