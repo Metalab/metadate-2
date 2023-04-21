@@ -3,7 +3,7 @@ use axum::{
     http::StatusCode,
     response::Html,
     routing::{get, get_service, post},
-    Json, Router,
+    Form, Json, Router,
 };
 use minijinja::{context, Environment};
 use serde::{Deserialize, Serialize};
@@ -21,6 +21,12 @@ struct Date {
     longdesc: String,
     contact: String,
 }
+
+#[derive(Deserialize)]
+struct DeleteRequest {
+    password: String,
+}
+
 #[tokio::main]
 async fn main() {
     // initialize tracing
@@ -40,6 +46,7 @@ async fn main() {
         // `POST /users` goes to `create_user`
         .route("/users", post(create_user))
         .route("/date/:date_id", get(show_date))
+        .route("/date/:date_id", post(delete_date))
         .nest_service("/public", get_service(ServeDir::new("public")))
         .with_state(env);
 
@@ -51,6 +58,10 @@ async fn main() {
         .serve(app.into_make_service())
         .await
         .unwrap();
+}
+
+async fn delete_date(Form(delete_request): Form<DeleteRequest>) -> Html<String> {
+    Html("Deleted (todo: better page here)".to_string())
 }
 
 // basic handler that responds with a static string
@@ -75,6 +86,7 @@ async fn show_date(
     let tmpl = env.get_template("date").unwrap();
     Html(tmpl.render(context!(date => current_date)).unwrap())
 }
+
 async fn create_user(
     // this argument tells axum to parse the request body
     // as JSON into a `CreateUser` type
