@@ -5,7 +5,7 @@ use axum::{
     routing::{get, get_service, post},
     Json, Router,
 };
-use minijinja::{context, render, Environment};
+use minijinja::{context, Environment};
 use serde::{Deserialize, Serialize};
 use std::{net::SocketAddr, sync::Arc};
 
