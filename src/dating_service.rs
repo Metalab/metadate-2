@@ -1,7 +1,5 @@
-use axum::{extract::State, response::Html, Form, Json};
-use minijinja::{context, Environment};
 use serde::{Deserialize, Serialize};
-use std::{sync::Arc, time::SystemTime};
+use std::time::SystemTime;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
@@ -31,8 +29,14 @@ impl DateContent {
 #[derive(Debug, Serialize, Clone, Deserialize)]
 pub struct Date {
     id: Uuid,
-    touched: SystemTime,
+    created: SystemTime,
+    due: SystemTime,
     content: DateContent,
+}
+
+#[derive(Deserialize)]
+pub struct DeleteRequest {
+    pub password: String,
 }
 
 pub struct DatingService {
@@ -59,15 +63,25 @@ impl DatingService {
         self.dates.read().await.to_vec()
     }
 
-    pub async fn delete(&self, id: uuid::Uuid) {
-        self.dates.write().await.retain(|date| date.id != id);
+    pub async fn delete(&self, id: uuid::Uuid, password: String) -> Result<(), String> {
+        let mut vector_of_dates = self.dates.write().await;
+        let pos = match vector_of_dates.iter().position(|date| date.id == id) {
+            Some(pos) => pos,
+            None => return Err(String::from("Date does not exist!")),
+        };
+        if vector_of_dates[pos].content.password != password {
+            return Err(String::from("Password incorrect!"));
+        }
+        vector_of_dates.remove(pos);
+        Ok(())
     }
 
     pub async fn add_date(&self, content: DateContent) -> Result<Uuid, String> {
         let new_id = Uuid::new_v4();
         let new_date = Date {
             id: new_id.clone(),
-            touched: SystemTime::now(),
+            created: SystemTime::now(),
+            due: SystemTime::now(),
             content: content,
         };
 
@@ -75,15 +89,6 @@ impl DatingService {
 
         Ok(new_id)
     }
-}
-
-#[derive(Deserialize)]
-pub struct DeleteRequest {
-    password: String,
-}
-
-pub async fn delete_date(Form(delete_request): Form<DeleteRequest>) -> Html<String> {
-    Html("Deleted (todo: better page here)".to_string())
 }
 
 #[cfg(test)]
@@ -127,7 +132,9 @@ mod tests {
             .add_date(input_content.clone())
             .await
             .unwrap();
-        dating_service.delete(new_uuid).await;
+        dating_service
+            .delete(new_uuid, String::from("public"))
+            .await;
         assert!(dating_service.get_date(new_uuid).await.is_err());
     }
 }

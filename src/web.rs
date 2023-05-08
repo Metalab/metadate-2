@@ -3,7 +3,7 @@ use axum::{
     http::StatusCode,
     response::Html,
     routing::{get, get_service, post},
-    Form, Json, Router,
+    Form, Router,
 };
 use minijinja::{context, Environment};
 use std::{net::SocketAddr, sync::Arc};
@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use tower_http::services::ServeDir;
 
-use crate::dating_service::{delete_date, Date, DateContent, DatingService};
+use crate::dating_service::{DateContent, DatingService, DeleteRequest};
 
 pub struct Web {
     dating: DatingService,
@@ -37,7 +37,7 @@ impl Web {
             .route("/newdate", get(Self::input))
             .route("/", post(Self::add_date))
             .route("/date/:date_id", get(Self::show_date))
-            .route("/date/:date_id/delete", post(delete_date))
+            .route("/date/:date_id", post(Self::delete_date))
             .nest_service("/public", get_service(ServeDir::new("public")))
             .with_state(self.clone());
 
@@ -61,13 +61,33 @@ impl Web {
         };
         let errors: Vec<String> = Vec::new();
 
-        let current_date = web.dating.get_date(user_id).await.unwrap();
-        let tmpl = web.env.get_template("date").unwrap();
+        match web.dating.get_date(user_id).await {
+            Ok(current_date) => {
+                let tmpl = web.env.get_template("date").unwrap();
 
-        Html(
-            tmpl.render(context!(errors => errors,date => current_date))
-                .unwrap(),
-        )
+                Html(
+                    tmpl.render(context!(errors => errors,date => current_date))
+                        .unwrap(),
+                )
+            }
+            Err(_) => return Html("Date not found :(".to_string()),
+        }
+    }
+
+    pub async fn delete_date(
+        State(web): State<Arc<Self>>,
+        Path(user_id): Path<String>,
+        Form(delete_data): Form<DeleteRequest>,
+    ) -> Html<String> {
+        let uuid = match Uuid::parse_str(&user_id) {
+            Err(_) => return Html("Date not found :(".to_string()),
+            Ok(uuid) => uuid,
+        };
+
+        match web.dating.delete(uuid, delete_data.password).await {
+            Err(error) => Html(error),
+            Ok(_) => Html("Deleted (todo: better page here)".to_string()),
+        }
     }
 
     pub async fn input(State(web): State<Arc<Web>>) -> Html<String> {
@@ -93,6 +113,6 @@ impl Web {
         Form(new_date): Form<DateContent>,
     ) -> Html<String> {
         web.dating.add_date(new_date).await.unwrap();
-        Html("Deleted (todo: better page here)".to_string())
+        Html("Added (todo: better page here)".to_string())
     }
 }
