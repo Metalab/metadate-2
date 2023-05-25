@@ -1,5 +1,5 @@
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use std::time::SystemTime;
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
@@ -29,8 +29,8 @@ impl DateContent {
 #[derive(Debug, Serialize, Clone, Deserialize)]
 pub struct Date {
     id: Uuid,
-    created: SystemTime,
-    due: SystemTime,
+    created: chrono::DateTime<Utc>,
+    due: chrono::DateTime<Utc>,
     content: DateContent,
 }
 
@@ -80,14 +80,19 @@ impl DatingService {
         let new_id = Uuid::new_v4();
         let new_date = Date {
             id: new_id.clone(),
-            created: SystemTime::now(),
-            due: SystemTime::now(),
+            created: Utc::now(),
+            due: Utc::now() + chrono::Duration::seconds(30),
             content: content,
         };
 
         self.dates.write().await.push(new_date);
 
         Ok(new_id)
+    }
+
+    pub async fn clean_old_dates(&self) {
+        let now = Utc::now();
+        self.dates.write().await.retain(|v: &Date| v.due >= now)
     }
 }
 

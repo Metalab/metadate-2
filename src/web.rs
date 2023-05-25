@@ -1,7 +1,7 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    response::Html,
+    response::{Html, Redirect},
     routing::{get, get_service, post},
     Form, Router,
 };
@@ -14,12 +14,12 @@ use tower_http::services::ServeDir;
 use crate::dating_service::{DateContent, DatingService, DeleteRequest};
 
 pub struct Web {
-    dating: DatingService,
+    dating: Arc<DatingService>,
     env: Environment<'static>,
 }
 
 impl Web {
-    pub fn new(dating: DatingService) -> Arc<Self> {
+    pub fn new(dating: Arc<DatingService>) -> Arc<Self> {
         let mut env = Environment::new();
         env.add_template("list", include_str!("templates/list.html"))
             .unwrap();
