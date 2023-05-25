@@ -1,7 +1,7 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    response::{Html, Redirect},
+    response::Html,
     routing::{get, get_service, post},
     Form, Router,
 };

@@ -139,7 +139,8 @@ mod tests {
             .unwrap();
         dating_service
             .delete(new_uuid, String::from("public"))
-            .await;
+            .await
+            .ok();
         assert!(dating_service.get_date(new_uuid).await.is_err());
     }
 }
