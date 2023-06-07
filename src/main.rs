@@ -17,7 +17,7 @@ async fn main() {
 
     let inner_dating = dating.clone();
     tokio::spawn(async move {
-        let mut iv = time::interval(Duration::new(5, 0));
+        let mut iv = time::interval(Duration::new(60, 0));
         loop {
             iv.tick().await;
             inner_dating.clean_old_dates().await;

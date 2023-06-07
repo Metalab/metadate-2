@@ -1,7 +1,8 @@
+use askama_axum::{IntoResponse, Response};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    response::Html,
+    response::{Html, Redirect},
     routing::{get, get_service, post},
     Form, Router,
 };
@@ -11,7 +12,7 @@ use uuid::Uuid;
 
 use tower_http::services::ServeDir;
 
-use crate::dating_service::{DateContent, DatingService, DeleteRequest};
+use crate::dating_service::{DateContent, DatingService, DeleteRequest, InputError};
 
 pub struct Web {
     dating: Arc<DatingService>,
@@ -37,7 +38,7 @@ impl Web {
             .route("/newdate", get(Self::input))
             .route("/", post(Self::add_date))
             .route("/date/:date_id", get(Self::show_date))
-            .route("/date/:date_id", post(Self::delete_date))
+            .route("/date/:date_id", post(Self::edit_date))
             .nest_service("/public", get_service(ServeDir::new("public")))
             .with_state(self.clone());
 
@@ -74,17 +75,26 @@ impl Web {
         }
     }
 
-    pub async fn delete_date(
+    pub async fn edit_date(
         State(web): State<Arc<Self>>,
         Path(user_id): Path<String>,
-        Form(delete_data): Form<DeleteRequest>,
+        Form(update_data): Form<DeleteRequest>,
     ) -> Html<String> {
         let uuid = match Uuid::parse_str(&user_id) {
             Err(_) => return Html("Date not found :(".to_string()),
             Ok(uuid) => uuid,
         };
+        if update_data.action_type.is_none() {
+            return Html("No action specified".to_string());
+        }
 
-        match web.dating.delete(uuid, delete_data.password).await {
+        let time = update_data.action_type.unwrap();
+
+        match web
+            .dating
+            .reset_timeout(uuid, update_data.password, time)
+            .await
+        {
             Err(error) => Html(error),
             Ok(_) => Html("Deleted (todo: better page here)".to_string()),
         }
@@ -111,8 +121,17 @@ impl Web {
     pub async fn add_date(
         State(web): State<Arc<Self>>,
         Form(new_date): Form<DateContent>,
-    ) -> Html<String> {
-        web.dating.add_date(new_date).await.unwrap();
-        Html("Added (todo: better page here)".to_string())
+    ) -> Response {
+        match web.dating.add_date(new_date).await {
+            Ok(uuid) => return Redirect::to(format!("/date/{}", uuid).as_str()).into_response(),
+            Err(error_data) => {
+                let tmpl = web.env.get_template("input").unwrap();
+                Html(
+                    tmpl.render(context!(errors => error_data.errors,date => error_data.content))
+                        .unwrap(),
+                )
+                .into_response()
+            }
+        }
     }
 }

@@ -12,6 +12,11 @@ pub struct DateContent {
     contact: String,
     password: String,
 }
+#[derive(Debug)]
+pub struct InputError {
+    pub content: DateContent,
+    pub errors: Vec<String>,
+}
 
 impl DateContent {
     pub fn new() -> Self {
@@ -37,6 +42,7 @@ pub struct Date {
 #[derive(Deserialize)]
 pub struct DeleteRequest {
     pub password: String,
+    pub action_type: Option<String>,
 }
 
 pub struct DatingService {
@@ -63,25 +69,91 @@ impl DatingService {
         self.dates.read().await.to_vec()
     }
 
-    pub async fn delete(&self, id: uuid::Uuid, password: String) -> Result<(), String> {
-        let mut vector_of_dates = self.dates.write().await;
+    pub fn find_date(
+        &self,
+        id: uuid::Uuid,
+        password: String,
+        vector_of_dates: &[Date],
+    ) -> Result<usize, String> {
         let pos = match vector_of_dates.iter().position(|date| date.id == id) {
             Some(pos) => pos,
             None => return Err(String::from("Date does not exist!")),
         };
         if vector_of_dates[pos].content.password != password {
             return Err(String::from("Password incorrect!"));
+        } else {
+            Ok(pos)
         }
-        vector_of_dates.remove(pos);
-        Ok(())
     }
 
-    pub async fn add_date(&self, content: DateContent) -> Result<Uuid, String> {
+    pub async fn delete(&self, id: uuid::Uuid, password: String) -> Result<(), String> {
+        let mut vector_of_dates = self.dates.write().await;
+        match self.find_date(id, password, &vector_of_dates) {
+            Ok(pos) => {
+                vector_of_dates.remove(pos);
+                Ok(())
+            }
+            Err(msg) => Err(msg),
+        }
+    }
+
+    pub async fn reset_timeout(
+        &self,
+        id: uuid::Uuid,
+        password: String,
+        days: String,
+    ) -> Result<(), String> {
+        let days = match days.parse::<usize>() {
+            Ok(days) => days,
+            Err(_) => return Err(String::from("Time is not a number")),
+        };
+        if days > 21 {
+            return Err(String::from("Come on! Dont overdo it"));
+        }
+
+        let mut vector_of_dates = self.dates.write().await;
+        match self.find_date(id, password, &vector_of_dates) {
+            Ok(pos) => {
+                if days == 0 {
+                    vector_of_dates.remove(pos);
+                } else {
+                    vector_of_dates[pos].due = Utc::now() + chrono::Duration::days(days as i64);
+                }
+                Ok(())
+            }
+            Err(msg) => Err(msg),
+        }
+    }
+
+    pub async fn add_date(&self, content: DateContent) -> Result<Uuid, InputError> {
+        let mut errors: Vec<String> = Vec::new();
+        if content.who.len() < 2 {
+            errors.push("Who must be at least 2 characters long".to_string());
+        }
+        if content.who.len() > 15 {
+            errors.push("Who must be 15 characters or shorter".to_string());
+        }
+        if content.what.len() < 2 {
+            errors.push("What must be at least 2 characters long".to_string());
+        }
+        if content.what.len() > 15 {
+            errors.push("what must be 15 characters or shorter".to_string());
+        }
+        if content.shortdesc.len() < 10 {
+            errors.push("Short description has to be at lesat 10 characters long".to_string());
+        }
+        if content.shortdesc.len() > 200 {
+            errors.push("Short description must be 200 characters or shorter".to_string());
+        }
+        if errors.len() > 0 {
+            let x = InputError { content, errors };
+            return Err(x);
+        }
         let new_id = Uuid::new_v4();
         let new_date = Date {
             id: new_id.clone(),
             created: Utc::now(),
-            due: Utc::now() + chrono::Duration::seconds(30),
+            due: Utc::now() + chrono::Duration::days(7),
             content: content,
         };
 
