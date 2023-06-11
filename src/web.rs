@@ -80,23 +80,41 @@ impl Web {
         Path(user_id): Path<String>,
         Form(update_data): Form<DeleteRequest>,
     ) -> Html<String> {
+        let mut errors: Vec<String> = Vec::new();
         let uuid = match Uuid::parse_str(&user_id) {
             Err(_) => return Html("Date not found :(".to_string()),
             Ok(uuid) => uuid,
         };
         if update_data.action_type.is_none() {
-            return Html("No action specified".to_string());
+            errors.push("No action specified".to_string());
+        } else {
+            let time = update_data.action_type.unwrap();
+
+            let reset_response = web
+                .dating
+                .reset_timeout(uuid, update_data.password, time)
+                .await;
+
+            match reset_response {
+                Err(error) => errors.push(error),
+                _ => errors.push("Extended!".to_string()),
+            }
         }
 
-        let time = update_data.action_type.unwrap();
+        let user_id = match Uuid::parse_str(&user_id) {
+            Err(_) => return Html(StatusCode::BAD_REQUEST.to_string()),
+            Ok(user_id) => user_id,
+        };
+        match web.dating.get_date(user_id).await {
+            Ok(current_date) => {
+                let tmpl = web.env.get_template("date").unwrap();
 
-        match web
-            .dating
-            .reset_timeout(uuid, update_data.password, time)
-            .await
-        {
-            Err(error) => Html(error),
-            Ok(_) => Html("Deleted (todo: better page here)".to_string()),
+                Html(
+                    tmpl.render(context!(errors => errors,date => current_date))
+                        .unwrap(),
+                )
+            }
+            Err(_) => return Html("Date not found :(".to_string()),
         }
     }
 
@@ -122,16 +140,30 @@ impl Web {
         State(web): State<Arc<Self>>,
         Form(new_date): Form<DateContent>,
     ) -> Response {
-        match web.dating.add_date(new_date).await {
-            Ok(uuid) => return Redirect::to(format!("/date/{}", uuid).as_str()).into_response(),
-            Err(error_data) => {
-                let tmpl = web.env.get_template("input").unwrap();
-                Html(
-                    tmpl.render(context!(errors => error_data.errors,date => error_data.content))
+        let mut errors: Vec<String> = Vec::new();
+        let tmpl = web.env.get_template("input").unwrap();
+        match new_date.action_type {
+            None => errors.push("No action specified".to_string()),
+            Some(_) => match web.dating.add_date(new_date).await {
+                Ok(uuid) => {
+                    return Redirect::to(format!("/date/{}", uuid).as_str()).into_response()
+                }
+                Err(error_data) => {
+                    return Html(
+                        tmpl.render(
+                            context!(errors => error_data.errors,date => error_data.content),
+                        )
                         .unwrap(),
-                )
-                .into_response()
-            }
+                    )
+                    .into_response()
+                }
+            },
         }
+
+        Html(
+            tmpl.render(context!(errors => errors,date => new_date))
+                .unwrap(),
+        )
+        .into_response()
     }
 }

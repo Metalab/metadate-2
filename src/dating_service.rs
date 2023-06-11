@@ -11,7 +11,9 @@ pub struct DateContent {
     longdesc: String,
     contact: String,
     password: String,
+    pub action_type: Option<String>,
 }
+
 #[derive(Debug)]
 pub struct InputError {
     pub content: DateContent,
@@ -27,6 +29,7 @@ impl DateContent {
             longdesc: String::from(""),
             contact: String::from(""),
             password: String::from("public"),
+            action_type: None,
         }
     }
 }
@@ -43,6 +46,17 @@ pub struct Date {
 pub struct DeleteRequest {
     pub password: String,
     pub action_type: Option<String>,
+}
+
+fn validate_time(input: &str) -> Result<usize, String> {
+    let days = match input.parse::<usize>() {
+        Ok(days) => days,
+        Err(_) => return Err(String::from("Time is not a number")),
+    };
+    if days > 21 {
+        return Err(String::from("Come on! Dont overdo it"));
+    }
+    Ok(days)
 }
 
 pub struct DatingService {
@@ -86,30 +100,16 @@ impl DatingService {
         }
     }
 
-    pub async fn delete(&self, id: uuid::Uuid, password: String) -> Result<(), String> {
-        let mut vector_of_dates = self.dates.write().await;
-        match self.find_date(id, password, &vector_of_dates) {
-            Ok(pos) => {
-                vector_of_dates.remove(pos);
-                Ok(())
-            }
-            Err(msg) => Err(msg),
-        }
-    }
-
     pub async fn reset_timeout(
         &self,
         id: uuid::Uuid,
         password: String,
         days: String,
     ) -> Result<(), String> {
-        let days = match days.parse::<usize>() {
+        let days = match validate_time(&days) {
             Ok(days) => days,
-            Err(_) => return Err(String::from("Time is not a number")),
+            Err(e) => return Err(e),
         };
-        if days > 21 {
-            return Err(String::from("Come on! Dont overdo it"));
-        }
 
         let mut vector_of_dates = self.dates.write().await;
         match self.find_date(id, password, &vector_of_dates) {
@@ -117,7 +117,7 @@ impl DatingService {
                 if days == 0 {
                     vector_of_dates.remove(pos);
                 } else {
-                    vector_of_dates[pos].due = Utc::now() + chrono::Duration::days(days as i64);
+                    vector_of_dates[pos].due = Utc::now() + chrono::Duration::minutes(days as i64);
                 }
                 Ok(())
             }
@@ -145,15 +145,22 @@ impl DatingService {
         if content.shortdesc.len() > 200 {
             errors.push("Short description must be 200 characters or shorter".to_string());
         }
+        let maybe_days = validate_time(&content.action_type.clone().unwrap());
+        let mut days: i64 = 0;
+        if (maybe_days.is_err()) {
+            errors.push(maybe_days.err().unwrap())
+        } else {
+            days = maybe_days.unwrap() as i64;
+        }
         if errors.len() > 0 {
-            let x = InputError { content, errors };
-            return Err(x);
+            let e = InputError { content, errors };
+            return Err(e);
         }
         let new_id = Uuid::new_v4();
         let new_date = Date {
             id: new_id.clone(),
             created: Utc::now(),
-            due: Utc::now() + chrono::Duration::days(7),
+            due: Utc::now() + chrono::Duration::minutes(days),
             content: content,
         };
 
@@ -184,6 +191,7 @@ mod tests {
                 longdesc: String::from("I am so depressed. Please gimme something to sleep"),
                 contact: String::from("intern@lists.metalab.at"),
                 password: String::from("public"),
+                action_type: None,
             }
         }
     }
@@ -210,7 +218,7 @@ mod tests {
             .await
             .unwrap();
         dating_service
-            .delete(new_uuid, String::from("public"))
+            .reset_timeout(new_uuid, String::from("public"), String::from("0"))
             .await
             .ok();
         assert!(dating_service.get_date(new_uuid).await.is_err());
