@@ -78,9 +78,9 @@
       clone.getElementById("who").innerText = data.content.who;
       clone.getElementById("what").innerText = data.content.what;
       clone.getElementById("shortdesc").innerText = data.content.shortdesc;
-      clone.getElementById("link").href = "http://metadate.cool/" + data.id;
-      clone.getElementById("link").innerText = "http://metadate.cool/" + data.id;
-      qrcode = new QRCode(clone.getElementById("qrcode"), { text: "URL:" + "http://metadate.cool/" + data.id, useSVG: true, correctLevel: QRCode.CorrectLevel.M });
+      clone.getElementById("link").href = "http://metadate.cool/date" + data.id;
+      clone.getElementById("link").innerText = "http://metadate.cool/date/" + data.id;
+      qrcode = new QRCode(clone.getElementById("qrcode"), { text: "URL:" + "http://metadate.cool/date/" + data.id, useSVG: true, correctLevel: QRCode.CorrectLevel.M });
       return clone;
     }
 
