@@ -1,7 +1,9 @@
+use std::sync::atomic::{AtomicU64, Ordering};
+
+use block_id::{Alphabet, BlockId};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
-use uuid::Uuid;
 
 #[derive(Debug, Serialize, Clone, Deserialize)]
 pub struct DateContent {
@@ -32,14 +34,38 @@ impl DateContent {
             action_type: None,
         }
     }
+
+    pub fn new_placeholder() -> Self {
+        DateContent {
+            who: String::from("Dating Plattform"),
+            what: String::from("Date"),
+            shortdesc: String::from(
+                "There is currently no date on this dating plattform feel free to post one",
+            ),
+            longdesc: String::from(""),
+            contact: String::from(""),
+            password: String::from("public"),
+            action_type: None,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Clone, Deserialize)]
 pub struct Date {
-    id: Uuid,
+    id: String,
     created: chrono::DateTime<Utc>,
     due: chrono::DateTime<Utc>,
     content: DateContent,
+}
+impl Date {
+    pub fn new(id: String, content: DateContent, alive_in_days: i64) -> Self {
+        Date {
+            id,
+            created: Utc::now(),
+            due: Utc::now() + chrono::Duration::days(alive_in_days),
+            content,
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -61,16 +87,21 @@ fn validate_time(input: &str) -> Result<usize, String> {
 
 pub struct DatingService {
     dates: RwLock<Vec<Date>>,
+    current_id: AtomicU64,
+    id_generator: BlockId<char>,
 }
 
 impl DatingService {
     pub fn new() -> DatingService {
         DatingService {
             dates: RwLock::new(Vec::new()),
+            current_id: AtomicU64::new(0),
+            id_generator: BlockId::new(Alphabet::lowercase_alphanumeric(), 9876, 5),
         }
     }
 
-    pub async fn get_date(&self, id: uuid::Uuid) -> Result<Date, ()> {
+    pub async fn get_date(&self, id: &str) -> Result<Date, ()> {
+        //let mut myiter = self.dates.read().await.iter().find(|date| date.id == id);
         for date in self.dates.read().await.iter() {
             if date.id == id {
                 return Ok(date.clone());
@@ -79,13 +110,34 @@ impl DatingService {
         Err(())
     }
 
+    pub async fn get_next_date_of(&self, id: Option<&str>) -> Date {
+        let dates = self.dates.read().await;
+        if dates.is_empty() {
+            return Date::new("empty".to_string(), DateContent::new_placeholder(), 0);
+        }
+
+        let id = match id {
+            None => return dates[0].clone(),
+            Some(id) => id,
+        };
+
+        let mut filtered_date = dates.iter().fuse().skip_while(|date| date.id != id);
+        filtered_date.next();
+        let maybe_next_date = filtered_date.next();
+
+        match maybe_next_date {
+            Some(date) => date.clone(),
+            None => dates[0].clone(),
+        }
+    }
+
     pub async fn list(&self) -> Vec<Date> {
         self.dates.read().await.to_vec()
     }
 
     pub fn find_date(
         &self,
-        id: uuid::Uuid,
+        id: &str,
         password: String,
         vector_of_dates: &[Date],
     ) -> Result<usize, String> {
@@ -94,7 +146,7 @@ impl DatingService {
             None => return Err(String::from("Date does not exist!")),
         };
         if vector_of_dates[pos].content.password != password {
-            return Err(String::from("Password incorrect!"));
+            Err(String::from("Password incorrect!"))
         } else {
             Ok(pos)
         }
@@ -102,7 +154,7 @@ impl DatingService {
 
     pub async fn reset_timeout(
         &self,
-        id: uuid::Uuid,
+        id: &str,
         password: String,
         days: String,
     ) -> Result<(), String> {
@@ -117,7 +169,7 @@ impl DatingService {
                 if days == 0 {
                     vector_of_dates.remove(pos);
                 } else {
-                    vector_of_dates[pos].due = Utc::now() + chrono::Duration::minutes(days as i64);
+                    vector_of_dates[pos].due = Utc::now() + chrono::Duration::days(days as i64);
                 }
                 Ok(())
             }
@@ -125,7 +177,7 @@ impl DatingService {
         }
     }
 
-    pub async fn add_date(&self, content: DateContent) -> Result<Uuid, InputError> {
+    pub async fn add_date(&self, content: DateContent) -> Result<String, InputError> {
         let mut errors: Vec<String> = Vec::new();
         if content.who.len() < 2 {
             errors.push("Who must be at least 2 characters long".to_string());
@@ -147,26 +199,23 @@ impl DatingService {
         }
         let maybe_days = validate_time(&content.action_type.clone().unwrap());
         let mut days: i64 = 0;
-        if (maybe_days.is_err()) {
+        if maybe_days.is_err() {
             errors.push(maybe_days.err().unwrap())
         } else {
             days = maybe_days.unwrap() as i64;
         }
-        if errors.len() > 0 {
+        if !errors.is_empty() {
             let e = InputError { content, errors };
             return Err(e);
         }
-        let new_id = Uuid::new_v4();
-        let new_date = Date {
-            id: new_id.clone(),
-            created: Utc::now(),
-            due: Utc::now() + chrono::Duration::minutes(days),
-            content: content,
-        };
-
+        let id = self
+            .id_generator
+            .encode_string(self.current_id.fetch_add(1, Ordering::AcqRel))
+            .unwrap();
+        let new_date = Date::new(id.clone(), content, days);
         self.dates.write().await.push(new_date);
 
-        Ok(new_id)
+        Ok(id)
     }
 
     pub async fn clean_old_dates(&self) {
@@ -204,7 +253,7 @@ mod tests {
             .add_date(input_content.clone())
             .await
             .unwrap();
-        let output_date = dating_service.get_date(new_uuid).await.unwrap();
+        let output_date = dating_service.get_date(&new_uuid).await.unwrap();
 
         assert_eq!(input_content.who, output_date.content.who);
     }
@@ -218,9 +267,9 @@ mod tests {
             .await
             .unwrap();
         dating_service
-            .reset_timeout(new_uuid, String::from("public"), String::from("0"))
+            .reset_timeout(&new_uuid, String::from("public"), String::from("0"))
             .await
             .ok();
-        assert!(dating_service.get_date(new_uuid).await.is_err());
+        assert!(dating_service.get_date(&new_uuid).await.is_err());
     }
 }

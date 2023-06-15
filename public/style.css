@@ -112,6 +112,10 @@ body {
     height: 300px;
 }
 
+#deleteDate {
+    height: 300px;
+}
+
 .editDate {
     height: 40px;
     width: 200px;

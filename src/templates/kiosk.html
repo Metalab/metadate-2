@@ -37,14 +37,18 @@
       </div>
     </div>
   </template>
-  <script src="qrcode.js"></script>
+  <script src="public/qrcode.js"></script>
   <script>
     var nextpage = 0;
-    var myObj = {
+    var content = {
+
       "who": "",
       "what": "",
       "shortdesc": "",
       "url": ""
+    };
+    var myObj = {
+      "content": content,
     };
 
 
@@ -71,16 +75,16 @@
     function createDiv(data) {
       var template = document.getElementsByTagName("template")[0];
       var clone = template.content.cloneNode(true);
-      clone.getElementById("who").innerText = data.who;
-      clone.getElementById("what").innerText = data.what;
-      clone.getElementById("shortdesc").innerText = data.shortdesc;
-      clone.getElementById("link").href = data.shortUrl;
-      clone.getElementById("link").innerText = data.url;
-      qrcode = new QRCode(clone.getElementById("qrcode"), { text: "URL:" + data.url, useSVG: true, correctLevel: QRCode.CorrectLevel.M });
+      clone.getElementById("who").innerText = data.content.who;
+      clone.getElementById("what").innerText = data.content.what;
+      clone.getElementById("shortdesc").innerText = data.content.shortdesc;
+      clone.getElementById("link").href = "http://metadate.cool/" + data.id;
+      clone.getElementById("link").innerText = "http://metadate.cool/" + data.id;
+      qrcode = new QRCode(clone.getElementById("qrcode"), { text: "URL:" + "http://metadate.cool/" + data.id, useSVG: true, correctLevel: QRCode.CorrectLevel.M });
       return clone;
     }
 
-    function getNextDateData() {
+    async function getNextDateData() {
 
       fetchPlus('/kiosk/' + nextpage)
         .then(response => response.json())
@@ -88,7 +92,7 @@
     }
 
     function swapContent(data) {
-      nextpage = data.nextpage;
+      nextpage = data.id;
       const clone = createDiv(data);
       document.body.appendChild(clone);
       document.getElementsByClassName("slider")[0].style.right = "100%";

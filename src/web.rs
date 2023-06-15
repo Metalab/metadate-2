@@ -1,18 +1,16 @@
 use askama_axum::{IntoResponse, Response};
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
     response::{Html, Redirect},
     routing::{get, get_service, post},
     Form, Router,
 };
 use minijinja::{context, Environment};
 use std::{net::SocketAddr, sync::Arc};
-use uuid::Uuid;
 
 use tower_http::services::ServeDir;
 
-use crate::dating_service::{DateContent, DatingService, DeleteRequest, InputError};
+use crate::dating_service::{DateContent, DatingService, DeleteRequest};
 
 pub struct Web {
     dating: Arc<DatingService>,
@@ -28,6 +26,8 @@ impl Web {
             .unwrap();
         env.add_template("input", include_str!("templates/input.html"))
             .unwrap();
+        env.add_template("kiosk", include_str!("templates/kiosk.html"))
+            .unwrap();
         Arc::new(Self { dating, env })
     }
     pub async fn start(self: &Arc<Web>) {
@@ -36,6 +36,8 @@ impl Web {
             // `GET /` goes to `root`
             .route("/", get(Self::list))
             .route("/newdate", get(Self::input))
+            .route("/kiosk", get(Self::show_kiosk))
+            .route("/kiosk/:date_id", get(Self::show_kiosk_entry))
             .route("/", post(Self::add_date))
             .route("/date/:date_id", get(Self::show_date))
             .route("/date/:date_id", post(Self::edit_date))
@@ -52,17 +54,27 @@ impl Web {
             .unwrap();
     }
 
+    pub async fn show_kiosk(State(web): State<Arc<Self>>) -> Html<String> {
+        let tmpl = web.env.get_template("kiosk").unwrap();
+
+        Html(tmpl.render(context!()).unwrap())
+    }
+
+    pub async fn show_kiosk_entry(
+        State(web): State<Arc<Self>>,
+        Path(user_id): Path<String>,
+    ) -> Response {
+        let date = web.dating.get_next_date_of(Some(&user_id)).await;
+        Html(serde_json::to_string(&date).unwrap()).into_response()
+    }
+
     pub async fn show_date(
         State(web): State<Arc<Self>>,
         Path(user_id): Path<String>,
     ) -> Html<String> {
-        let user_id = match Uuid::parse_str(&user_id) {
-            Err(_) => return Html(StatusCode::BAD_REQUEST.to_string()),
-            Ok(user_id) => user_id,
-        };
         let errors: Vec<String> = Vec::new();
 
-        match web.dating.get_date(user_id).await {
+        match web.dating.get_date(&user_id).await {
             Ok(current_date) => {
                 let tmpl = web.env.get_template("date").unwrap();
 
@@ -71,7 +83,7 @@ impl Web {
                         .unwrap(),
                 )
             }
-            Err(_) => return Html("Date not found :(".to_string()),
+            Err(_) => Html("Date not found :(".to_string()),
         }
     }
 
@@ -81,10 +93,6 @@ impl Web {
         Form(update_data): Form<DeleteRequest>,
     ) -> Html<String> {
         let mut errors: Vec<String> = Vec::new();
-        let uuid = match Uuid::parse_str(&user_id) {
-            Err(_) => return Html("Date not found :(".to_string()),
-            Ok(uuid) => uuid,
-        };
         if update_data.action_type.is_none() {
             errors.push("No action specified".to_string());
         } else {
@@ -92,7 +100,7 @@ impl Web {
 
             let reset_response = web
                 .dating
-                .reset_timeout(uuid, update_data.password, time)
+                .reset_timeout(&user_id, update_data.password, time)
                 .await;
 
             match reset_response {
@@ -101,11 +109,7 @@ impl Web {
             }
         }
 
-        let user_id = match Uuid::parse_str(&user_id) {
-            Err(_) => return Html(StatusCode::BAD_REQUEST.to_string()),
-            Ok(user_id) => user_id,
-        };
-        match web.dating.get_date(user_id).await {
+        match web.dating.get_date(&user_id).await {
             Ok(current_date) => {
                 let tmpl = web.env.get_template("date").unwrap();
 
@@ -114,7 +118,7 @@ impl Web {
                         .unwrap(),
                 )
             }
-            Err(_) => return Html("Date not found :(".to_string()),
+            Err(_) => Html("Date not found :(".to_string()),
         }
     }
 
